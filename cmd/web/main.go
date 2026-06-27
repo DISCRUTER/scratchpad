@@ -1,28 +1,63 @@
 package main
 
 import (
-	"log"
+	"flag"
+	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
-func main() {
-	// HTTP multiplexer
-	mux := http.NewServeMux()
+// Application struct
+type application struct {
+	logger *slog.Logger
+}
 
-	// Fileserve Handle
-	fileServer := http.FileServer(http.Dir("./ui/static/"))
-	
-	// Assigning routes
-	// Fileserve routes
-	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
-	// Handler Func Routes
-	mux.HandleFunc("GET /{$}", home)
-	mux.HandleFunc("GET /pad/create", createPad)
-	mux.HandleFunc("POST /pad/create", createPadPost)
-	mux.HandleFunc("GET /pad/view/{id}", viewPad)
+func main() {
+	// Network Address flag
+	addr := flag.String("addr", ":4000", "HTTP network address")
+	flag.Parse()
+
+	// Logger
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	// Creating application instance
+	app := &application{
+		logger: logger,
+	}
 	
 	// Starting server...
-	log.Print("Starting server on :4000")
-	err := http.ListenAndServe(":4000", mux)
-	log.Fatal(err)
+	logger.Info("Staring server", slog.String("addr", *addr))
+	err := http.ListenAndServe(*addr, app.routes())
+	logger.Error(err.Error())
+	os.Exit(1)
+}
+
+// Custom FileSystem for FileServer
+type nueturedFileSystem struct {
+	fs http.FileSystem
+}
+func (nfs nueturedFileSystem) Open(path string) (http.File, error) {
+	f, err := nfs.fs.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	if s.IsDir() {
+		index := filepath.Join(path, "index.html")
+		if _, err := nfs.fs.Open(index); err != nil {
+			closeErr := f.Close()
+			if closeErr != nil {
+				return nil, closeErr
+			}
+			return nil, err
+		}
+	}
+
+	return f, nil
 }
