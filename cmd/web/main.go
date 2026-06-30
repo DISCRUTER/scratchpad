@@ -1,63 +1,65 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
+
+	"github.com/discruter/scratchpad/internal/models"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // Application struct
 type application struct {
 	logger *slog.Logger
+	pads   *models.PadsModel
 }
 
 func main() {
 	// Network Address flag
 	addr := flag.String("addr", ":4000", "HTTP network address")
+	// Data Source Name for MySQL flag
+	dsn := flag.String("dsn", "web:pass@tcp(localhost:3306)/scratchpad?parseTime=true", "MySQL data source name.")
 	flag.Parse()
 
 	// Logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+	// DB Conn
+	db, err := openDB(*dsn)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
+	defer db.Close()
+
 	// Creating application instance
 	app := &application{
 		logger: logger,
+		pads:   &models.PadsModel{DB: db},
 	}
-	
+
 	// Starting server...
 	logger.Info("Staring server", slog.String("addr", *addr))
-	err := http.ListenAndServe(*addr, app.routes())
+	err = http.ListenAndServe(*addr, app.routes())
 	logger.Error(err.Error())
 	os.Exit(1)
 }
 
-// Custom FileSystem for FileServer
-type nueturedFileSystem struct {
-	fs http.FileSystem
-}
-func (nfs nueturedFileSystem) Open(path string) (http.File, error) {
-	f, err := nfs.fs.Open(path)
+func openDB(dsn string) (*sql.DB, error) {
+	// Start DB connection pooling
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
 	}
-
-	s, err := f.Stat()
-	if err != nil {
+	// Ping the DB to verify connection
+	if err = db.Ping(); err != nil {
+		db.Close()
 		return nil, err
 	}
 
-	if s.IsDir() {
-		index := filepath.Join(path, "index.html")
-		if _, err := nfs.fs.Open(index); err != nil {
-			closeErr := f.Close()
-			if closeErr != nil {
-				return nil, closeErr
-			}
-			return nil, err
-		}
-	}
-
-	return f, nil
+	return db, nil
 }
