@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	// "html/template"
 	"net/http"
 	"strconv"
 
@@ -13,34 +12,19 @@ import (
 // Handler function
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Server", "GO")
-
+	// Query database
 	pads, err := app.pads.Latest()
 	if err != nil {
 		app.serverError(w, r, err)
 		return
 	}
+	
+	// Constructing TemplateData
+	data := app.newTemplateData(r)
+	data.Pads = pads
 
-	for _, pad := range pads {
-		fmt.Fprintf(w, "%+v\n", pad)
-	}
-	// Template files
-	// files := []string{
-	// 	"./ui/html/base.tmpl",
-	// 	"./ui/html/pages/home.tmpl",
-	// 	"./ui/html/pages/nav.tmpl",
-	// }
-	// Parsing the template
-	// ts, err := template.ParseFiles(files...)
-	// if err != nil {
-	// 	app.serverError(w, r, err)
-	// 	return
-	// }
-
-	// Send template as response
-	// err = ts.ExecuteTemplate(w, "base", nil)
-	// if err != nil {
-	// 	app.serverError(w, r, err)
-	// }
+	// Render the page
+	app.render(w, r, http.StatusOK, "home.tmpl", data)
 }
 
 // Add a pad
@@ -87,6 +71,10 @@ func (app *application) viewPad(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send response
-	fmt.Fprintf(w, "%+v", pad)
+	// Constructing Dynamic data
+	data := app.newTemplateData(r)
+	data.Pad = pad
+	
+	// Render the page
+	app.render(w, r, http.StatusOK, "view.tmpl", data)
 }

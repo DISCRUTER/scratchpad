@@ -2,5 +2,22 @@
 
 {{define "main"}}
     <h2>Latest Pads</h2>
-    <p>There's nothing to see here yet!</p>
+    {{if .Pads}}
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Created</th>
+            <th>ID</th>
+        </tr>
+        {{range .Pads}}
+        <tr>
+            <td><a href='/pads/view/{{.ID}}'>{{.Title}}</a></td>
+            <td>{{.Created | humanDate}}</td>
+            <td>#{{.ID}}</td>
+        </tr>
+        {{end}}
+    </table>
+    {{else}}
+        <p>There's nothing to see here yet!</p>
+    {{end}}
 {{end}}
