@@ -3,9 +3,11 @@ package main
 import (
 	"net/http"
 	"path/filepath"
+
+	"github.com/justinas/alice"
 )
 
-func (app *application) routes() *http.ServeMux {
+func (app *application) routes() http.Handler {
 	// HTTP multiplexer
 	mux := http.NewServeMux()
 
@@ -17,8 +19,8 @@ func (app *application) routes() *http.ServeMux {
 	mux.HandleFunc("GET /pads/create", app.createPad)
 	mux.HandleFunc("POST /pads/create", app.createPadPost)
 	mux.HandleFunc("GET /pads/view/{id}", app.viewPad)
-
-	return mux
+	
+	return alice.New(app.recoverPanic, app.logRequest, commonHeaders).Then(mux)
 }
 
 

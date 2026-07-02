@@ -11,7 +11,6 @@ import (
 
 // Handler function
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Server", "GO")
 	// Query database
 	pads, err := app.pads.Latest()
 	if err != nil {
@@ -31,12 +30,9 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 func (app *application) createPad(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Create a new scratchpad..."))
 }
+
 // Create a Pad
 func (app *application) createPadPost(w http.ResponseWriter, r *http.Request) {
-	// w.Header().Add("Server", "GO")
-	// w.WriteHeader(http.StatusCreated)
-	// w.Write([]byte("scratchPad created..."))
-	
 	// Dummy Data
 	title := "O snail"
 	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n– Kobayashi Issa"
