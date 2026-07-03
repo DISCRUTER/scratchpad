@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/discruter/scratchpad/internal/models"
+	"github.com/go-playground/form/v4"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -17,6 +18,7 @@ type application struct {
 	logger        *slog.Logger
 	pads          *models.PadsModel
 	templateCache map[string]*template.Template
+	formDecoder   *form.Decoder
 }
 
 func main() {
@@ -45,11 +47,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Intialize form decoder
+	formDecoder := form.NewDecoder()
+	
 	// Creating application instance
 	app := &application{
 		logger:        logger,
 		pads:          &models.PadsModel{DB: db},
 		templateCache: templateCache,
+		formDecoder:   formDecoder,
 	}
 
 	// Starting server...

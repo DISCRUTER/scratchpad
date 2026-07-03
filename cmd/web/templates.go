@@ -12,6 +12,7 @@ type TemplateData struct {
 	CurrentYear int
 	Pad         models.Pads
 	Pads        []models.Pads
+	Form        any
 }
 
 // Template functions
