@@ -15,12 +15,14 @@ func (app *application) routes() http.Handler {
 	fileServer := http.FileServer(nueturedFileSystem{http.Dir("./ui/static/")})
 	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
 	// Handler Func Routes
-	mux.HandleFunc("GET /{$}", app.home)
-	mux.HandleFunc("GET /pads/create", app.createPad)
-	mux.HandleFunc("POST /pads/create", app.createPadPost)
-	mux.HandleFunc("GET /pads/view/{id}", app.viewPad)
-	
-	return alice.New(app.recoverPanic, app.logRequest, commonHeaders).Then(mux)
+	dynamic := alice.New(app.sessionManager.LoadAndSave) // Dynamic session manager handler
+	mux.Handle("GET /{$}", dynamic.ThenFunc(app.home))
+	mux.Handle("GET /pads/create", dynamic.ThenFunc(app.createPad))
+	mux.Handle("POST /pads/create", dynamic.ThenFunc(app.createPadPost))
+	mux.Handle("GET /pads/view/{id}", dynamic.ThenFunc(app.viewPad))
+
+	standard := alice.New(app.recoverPanic, app.logRequest, commonHeaders)
+	return standard.Then(mux)
 }
 
 

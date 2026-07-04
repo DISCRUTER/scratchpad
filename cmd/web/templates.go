@@ -13,6 +13,7 @@ type TemplateData struct {
 	Pad         models.Pads
 	Pads        []models.Pads
 	Form        any
+	Flash       string
 }
 
 // Template functions

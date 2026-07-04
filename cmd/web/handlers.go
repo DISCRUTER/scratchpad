@@ -76,6 +76,10 @@ func (app *application) createPadPost(w http.ResponseWriter, r *http.Request) {
 		app.serverError(w, r, err)
 		return
 	}
+
+	// Add flash message to session data
+	app.sessionManager.Put(r.Context(), "flash", "Snippet successfully created!")
+	
 	// Redirect user to view page
 	http.Redirect(w, r, fmt.Sprintf("/pads/view/%d", id), http.StatusSeeOther)
 }

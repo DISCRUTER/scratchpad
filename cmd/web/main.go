@@ -7,7 +7,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/alexedwards/scs/mysqlstore"
+	"github.com/alexedwards/scs/v2"
 	"github.com/discruter/scratchpad/internal/models"
 	"github.com/go-playground/form/v4"
 	_ "github.com/go-sql-driver/mysql"
@@ -15,10 +18,11 @@ import (
 
 // Application struct
 type application struct {
-	logger        *slog.Logger
-	pads          *models.PadsModel
-	templateCache map[string]*template.Template
-	formDecoder   *form.Decoder
+	logger         *slog.Logger
+	pads           *models.PadsModel
+	templateCache  map[string]*template.Template
+	formDecoder    *form.Decoder
+	sessionManager *scs.SessionManager
 }
 
 func main() {
@@ -49,13 +53,19 @@ func main() {
 
 	// Intialize form decoder
 	formDecoder := form.NewDecoder()
-	
+
+	// Intializing session manager
+	sessionManager := scs.New()
+	sessionManager.Store = mysqlstore.New(db)
+	sessionManager.Lifetime = 12 * time.Hour
+
 	// Creating application instance
 	app := &application{
-		logger:        logger,
-		pads:          &models.PadsModel{DB: db},
-		templateCache: templateCache,
-		formDecoder:   formDecoder,
+		logger:         logger,
+		pads:           &models.PadsModel{DB: db},
+		templateCache:  templateCache,
+		formDecoder:    formDecoder,
+		sessionManager: sessionManager,
 	}
 
 	// Starting server...

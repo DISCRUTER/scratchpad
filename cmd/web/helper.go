@@ -50,6 +50,7 @@ func (app *application) render(w http.ResponseWriter, r *http.Request, status in
 func (app *application) newTemplateData(r *http.Request) TemplateData {
 	return TemplateData{
 		CurrentYear: time.Now().Year(),
+		Flash: app.sessionManager.PopString(r.Context(), "flash"),
 	}
 }
 
