@@ -17,7 +17,7 @@ func (app *application) routes() http.Handler {
 	
 	// Unprotected Routes
 	// Consumer Routes
-	dynamic := alice.New(app.sessionManager.LoadAndSave, noSurf) // Dynamic session manager handler
+	dynamic := alice.New(app.sessionManager.LoadAndSave, noSurf, app.authenticate) // Dynamic session manager handler
 	mux.Handle("GET /{$}", dynamic.ThenFunc(app.home))
 	mux.Handle("GET /pads/view/{id}", dynamic.ThenFunc(app.viewPad))
 	// Auth Routes
