@@ -9,11 +9,13 @@ import (
 )
 
 type TemplateData struct {
-	CurrentYear int
-	Pad         models.Pads
-	Pads        []models.Pads
-	Form        any
-	Flash       string
+	CurrentYear     int
+	Pad             models.Pads
+	Pads            []models.Pads
+	Form            any
+	Flash           string
+	IsAuthenticated bool
+	CSRFToken       string
 }
 
 // Template functions

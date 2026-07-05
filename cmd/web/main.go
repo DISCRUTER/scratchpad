@@ -21,6 +21,7 @@ import (
 type application struct {
 	logger         *slog.Logger
 	pads           *models.PadsModel
+	users          *models.UserModel
 	templateCache  map[string]*template.Template
 	formDecoder    *form.Decoder
 	sessionManager *scs.SessionManager
@@ -65,6 +66,7 @@ func main() {
 	app := &application{
 		logger:         logger,
 		pads:           &models.PadsModel{DB: db},
+		users:          &models.UserModel{DB: db},
 		templateCache:  templateCache,
 		formDecoder:    formDecoder,
 		sessionManager: sessionManager,
@@ -73,6 +75,7 @@ func main() {
 	// TLS Config
 	tlsConfig := &tls.Config{
 		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+		MinVersion: tls.VersionTLS13,
 	}
 	
 	// Setting up server
@@ -106,3 +109,4 @@ func openDB(dsn string) (*sql.DB, error) {
 
 	return db, nil
 }
+

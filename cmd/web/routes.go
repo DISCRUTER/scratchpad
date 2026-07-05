@@ -14,13 +14,26 @@ func (app *application) routes() http.Handler {
 	// Fileserve Handle
 	fileServer := http.FileServer(nueturedFileSystem{http.Dir("./ui/static/")})
 	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
-	// Handler Func Routes
-	dynamic := alice.New(app.sessionManager.LoadAndSave) // Dynamic session manager handler
+	
+	// Unprotected Routes
+	// Consumer Routes
+	dynamic := alice.New(app.sessionManager.LoadAndSave, noSurf) // Dynamic session manager handler
 	mux.Handle("GET /{$}", dynamic.ThenFunc(app.home))
-	mux.Handle("GET /pads/create", dynamic.ThenFunc(app.createPad))
-	mux.Handle("POST /pads/create", dynamic.ThenFunc(app.createPadPost))
 	mux.Handle("GET /pads/view/{id}", dynamic.ThenFunc(app.viewPad))
+	// Auth Routes
+	mux.Handle("GET /user/signup", dynamic.ThenFunc(app.userSignup))
+	mux.Handle("POST /user/signup", dynamic.ThenFunc(app.userSignupPost))
+	mux.Handle("GET /user/login", dynamic.ThenFunc(app.userLogin))
+	mux.Handle("POST /user/login", dynamic.ThenFunc(app.userLoginPost))
 
+	// Protected Routes
+	protected := dynamic.Append(app.requireAuthentication)
+	// Consumer Routes
+	mux.Handle("GET /pads/create", protected.ThenFunc(app.createPad))
+	mux.Handle("POST /pads/create", protected.ThenFunc(app.createPadPost))
+	// Auth Routes
+	mux.Handle("POST /user/logout", protected.ThenFunc(app.userLogoutPost))
+	
 	standard := alice.New(app.recoverPanic, app.logRequest, commonHeaders)
 	return standard.Then(mux)
 }
