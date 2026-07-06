@@ -2,10 +2,12 @@ package main
 
 import (
 	"html/template"
+	"io/fs"
 	"path/filepath"
 	"time"
 
 	"github.com/discruter/scratchpad/internal/models"
+	"github.com/discruter/scratchpad/ui"
 )
 
 type TemplateData struct {
@@ -32,7 +34,7 @@ func NewTemplateCahche() (map[string]*template.Template, error) {
 	// Making cache map
 	cache := make(map[string]*template.Template)
 	// Getting all the files that match the filepath glob
-	pages, err := filepath.Glob("./ui/html/pages/*.tmpl")
+	pages, err := fs.Glob(ui.Files, "html/pages/*.tmpl")
 	if err != nil {
 		return nil, err
 	}
@@ -41,23 +43,19 @@ func NewTemplateCahche() (map[string]*template.Template, error) {
 		// Extracting the base name of the files
 		name := filepath.Base(page)
 
-		// Parsing base.tmpl & register template func
-		ts, err := template.New(name).Funcs(functions).ParseFiles("./ui/html/base.tmpl")
+		// List all the templates to be parsed
+		patterns := []string{
+			"html/base.tmpl",
+			"html/partials/*.tmpl",
+			page,
+		}
+
+		// Parsing template files
+		ts, err := template.New(name).Funcs(functions).ParseFS(ui.Files, patterns...)
 		if err != nil {
 			return nil, err
 		}
 
-		// Parsing all partial files
-		ts, err = ts.ParseGlob("./ui/html/partials/*.tmpl")
-		if err != nil {
-			return nil, err
-		}
-
-		// Parsing page
-		ts, err = ts.ParseFiles(page)
-		if err != nil {
-			return nil, err
-		}
 		// Adding templates to cache map
 		cache[name] = ts
 	}
