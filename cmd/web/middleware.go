@@ -28,10 +28,10 @@ func (app *application) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Declaring info
 		var (
-			ip = r.RemoteAddr
-			proto = r.Proto
+			ip     = r.RemoteAddr
+			proto  = r.Proto
 			method = r.Method
-			uri = r.RequestURI
+			uri    = r.RequestURI
 		)
 		// Logging data
 		app.logger.Info("received request", slog.String("ip", ip), slog.String("proto", proto), slog.String("method", method), slog.String("uri", uri))
@@ -50,7 +50,7 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 				app.serverError(w, r, fmt.Errorf("%s", err))
 			}
 		}()
-		
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -74,8 +74,8 @@ func noSurf(next http.Handler) http.Handler {
 	csrfHandler := nosurf.New(next)
 	csrfHandler.SetBaseCookie(http.Cookie{
 		HttpOnly: true,
-		Path: "/",
-		Secure: true,
+		Path:     "/",
+		Secure:   true,
 	})
 	return csrfHandler
 }

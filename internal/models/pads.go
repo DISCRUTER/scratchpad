@@ -14,12 +14,18 @@ type Pads struct {
 	Expires time.Time
 }
 
+type PadsModelInterface interface {
+	Insert(title, content string, expires int) (int, error)
+	Get(id int) (Pads, error)
+	Latest() ([]Pads, error)
+}
+
 type PadsModel struct {
 	DB *sql.DB
 }
 
 // Insert new Pad in DB and return ID
-func (m * PadsModel) Insert(title string, content string, expires int) (int, error) {
+func (m *PadsModel) Insert(title string, content string, expires int) (int, error) {
 	// Raw SQL insert statement
 	stmt := `INSERT INTO pads (title, content, created, expires)
 	VALUES(?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY))`
@@ -33,7 +39,7 @@ func (m * PadsModel) Insert(title string, content string, expires int) (int, err
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return int(id), nil
 }
 
@@ -55,7 +61,7 @@ func (m *PadsModel) Get(id int) (Pads, error) {
 			return Pads{}, err
 		}
 	}
-	return p ,nil
+	return p, nil
 }
 
 // This will the recent 10 Pads

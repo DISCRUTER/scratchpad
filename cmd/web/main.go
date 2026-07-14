@@ -20,8 +20,8 @@ import (
 // Application struct
 type application struct {
 	logger         *slog.Logger
-	pads           *models.PadsModel
-	users          *models.UserModel
+	pads           models.PadsModelInterface
+	users          models.UserModelInterface
 	templateCache  map[string]*template.Template
 	formDecoder    *form.Decoder
 	sessionManager *scs.SessionManager
@@ -47,7 +47,7 @@ func main() {
 	defer db.Close()
 
 	// Initalizing cache map
-	templateCache, err := NewTemplateCahche()
+	templateCache, err := newTemplateCache()
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
@@ -75,17 +75,17 @@ func main() {
 	// TLS Config
 	tlsConfig := &tls.Config{
 		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
-		MinVersion: tls.VersionTLS13,
+		MinVersion:       tls.VersionTLS13,
 	}
-	
+
 	// Setting up server
 	srv := &http.Server{
-		Addr: *addr,
-		Handler: app.routes(),
-		ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError),
-		TLSConfig: tlsConfig,
-		IdleTimeout: time.Minute,
-		ReadTimeout: 5 * time.Second,
+		Addr:         *addr,
+		Handler:      app.routes(),
+		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
+		TLSConfig:    tlsConfig,
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 	// Starting server...
@@ -109,4 +109,3 @@ func openDB(dsn string) (*sql.DB, error) {
 
 	return db, nil
 }
-

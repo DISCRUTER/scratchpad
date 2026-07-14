@@ -15,7 +15,7 @@ import (
 func (app *application) serverError(w http.ResponseWriter, r *http.Request, err error) {
 	var (
 		method = r.Method
-		url = r.RequestURI
+		url    = r.RequestURI
 	)
 	app.logger.Error(err.Error(), slog.String("method", method), slog.String("url", url))
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -40,7 +40,7 @@ func (app *application) render(w http.ResponseWriter, r *http.Request, status in
 		app.serverError(w, r, err)
 		return
 	}
-	
+
 	// Write status code
 	w.WriteHeader(status)
 	// Writing buffer data to w
@@ -50,10 +50,10 @@ func (app *application) render(w http.ResponseWriter, r *http.Request, status in
 // Create new templatedata
 func (app *application) newTemplateData(r *http.Request) TemplateData {
 	return TemplateData{
-		CurrentYear: time.Now().Year(),
-		Flash: app.sessionManager.PopString(r.Context(), "flash"),
+		CurrentYear:     time.Now().Year(),
+		Flash:           app.sessionManager.PopString(r.Context(), "flash"),
 		IsAuthenticated: app.isAuthenticated(r),
-		CSRFToken: nosurf.Token(r),
+		CSRFToken:       nosurf.Token(r),
 	}
 }
 
@@ -69,7 +69,7 @@ func (app *application) decodePostForm(r *http.Request, dst any) error {
 		if errors.As(err, &invalidDecodeError) {
 			panic(err)
 		}
-		
+
 		return err
 	}
 	return nil

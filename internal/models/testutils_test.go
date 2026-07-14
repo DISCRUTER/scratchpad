@@ -1,0 +1,44 @@
+package models
+
+import (
+	"database/sql"
+	"os"
+	"testing"
+)
+
+func newTestDB(t *testing.T) *sql.DB {
+	// Connect to db
+	db, err := sql.Open("mysql", "test_web:pass@tcp(localhost:3306)/test_scratchpad?parseTime=true&multiStatements=true")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Read the query file
+	script, err := os.ReadFile("./testdata/setup.sql")
+	if err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	// Execute the query
+	_, err = db.Exec(string(script))
+	if err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+
+	// Cleanup function
+	t.Cleanup(func() {
+		defer db.Close()
+		
+		script, err := os.ReadFile("./testdata/teardown.sql")
+		if err != nil {
+			t.Fatal(err)
+		}
+			
+		_, err = db.Exec(string(script))
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+	
+	return db
+}

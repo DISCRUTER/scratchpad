@@ -22,7 +22,10 @@ type TemplateData struct {
 
 // Template functions
 func humanDate(t time.Time) string {
-	return t.Format("02 Jan 2006 at 15:04")
+	if t.IsZero() {
+		return ""
+	}
+	return t.UTC().Format("02 Jan 2006 at 15:04")
 }
 
 // Creating a template.FuncMap
@@ -30,7 +33,7 @@ var functions = template.FuncMap{
 	"humanDate": humanDate,
 }
 
-func NewTemplateCahche() (map[string]*template.Template, error) {
+func newTemplateCache() (map[string]*template.Template, error) {
 	// Making cache map
 	cache := make(map[string]*template.Template)
 	// Getting all the files that match the filepath glob

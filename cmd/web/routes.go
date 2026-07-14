@@ -12,9 +12,12 @@ func (app *application) routes() http.Handler {
 	// HTTP multiplexer
 	mux := http.NewServeMux()
 
+	// Test ping
+	mux.HandleFunc("GET /ping", ping)
+
 	// Fileserve Handle
 	mux.Handle("GET /static/", http.FileServerFS(ui.Files))
-	
+
 	// Unprotected Routes
 	// Consumer Routes
 	dynamic := alice.New(app.sessionManager.LoadAndSave, noSurf, app.authenticate) // Dynamic session manager handler
@@ -33,16 +36,16 @@ func (app *application) routes() http.Handler {
 	mux.Handle("POST /pads/create", protected.ThenFunc(app.createPadPost))
 	// Auth Routes
 	mux.Handle("POST /user/logout", protected.ThenFunc(app.userLogoutPost))
-	
+
 	standard := alice.New(app.recoverPanic, app.logRequest, commonHeaders)
 	return standard.Then(mux)
 }
-
 
 // Custom FileSystem for FileServer
 type nueturedFileSystem struct {
 	fs http.FileSystem
 }
+
 func (nfs nueturedFileSystem) Open(path string) (http.File, error) {
 	f, err := nfs.fs.Open(path)
 	if err != nil {
