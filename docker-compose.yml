@@ -1,0 +1,31 @@
+services:
+  db:
+    image: mysql:9.7
+    container_name: scratchpad_mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: $(DB_ROOT_PASSWORD)
+      MYSQL_DATABASE: scratchpad
+      MYSQL_USER: web@%
+      MYSQL_PASSWORD: $(DB_PASSWORD)
+    networks:
+      - scratchpad_net
+    volumes:
+      - scratchpad_data:/var/lib/mysql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  web:
+    build: .
+    container_name: scratchpad_go_web
+    restart: always
+    networks:
+      - scratchpad_net
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  scratchpad_data:
+networks:
+  scratchpad_net:

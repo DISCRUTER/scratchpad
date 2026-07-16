@@ -29,9 +29,17 @@ type application struct {
 
 func main() {
 	// Network Address flag
-	addr := flag.String("addr", ":4000", "HTTP network address")
+	defaultAddr := os.Getenv("ADDR")
+	if defaultAddr == "" {
+		defaultAddr = ":4000"
+	}
+	addr := flag.String("addr", defaultAddr, "HTTP network address")
 	// Data Source Name for MySQL flag
-	dsn := flag.String("dsn", "web:pass@tcp(localhost:3306)/scratchpad?parseTime=true", "MySQL data source name.")
+	defaultDSN := os.Getenv("DSN")
+	if defaultDSN == "" {
+		defaultDSN = "web:pass@tcp(localhost:3306)/scratchpad?parseTime=true"
+	}
+	dsn := flag.String("dsn", defaultDSN, "MySQL data source name.")
 	flag.Parse()
 
 	// Logger
