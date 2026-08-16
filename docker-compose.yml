@@ -3,15 +3,20 @@ services:
     image: mysql:9.7
     container_name: scratchpad_mysql_db
     environment:
-      MYSQL_ROOT_PASSWORD: $(DB_ROOT_PASSWORD)
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: scratchpad
-      MYSQL_USER: web@%
-      MYSQL_PASSWORD: $(DB_PASSWORD)
+      MYSQL_USER: web
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     networks:
       - scratchpad_net
     volumes:
       - scratchpad_data:/var/lib/mysql
       - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   web:
     build: .
