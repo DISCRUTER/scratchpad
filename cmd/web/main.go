@@ -29,26 +29,42 @@ type application struct {
 	sessionManager *scs.SessionManager
 }
 
-func main() {
-	// Network Address flag
-	defaultAddr := os.Getenv("ADDR")
-	if defaultAddr == "" {
-		defaultAddr = "4000"
+type config struct {
+	port string
+	db struct{
+		dsn string
+		maxOpenConns int
+		maxIdleConns int
+		maxIdleTime time.Duration
 	}
-	addr := flag.String("addr", defaultAddr, "HTTP network address")
-	// Data Source Name for MySQL flag
+}
+
+func main() {
+	var cfg config
+	// Network Address flag
+	defaultPort := os.Getenv("PORT")
+	if defaultPort == "" {
+		defaultPort = "4000"
+	}
+	flag.StringVar(&cfg.port, "port", defaultPort, "HTTP network address")
+	// Data Source Name for PostgreSQL flag
 	defaultDSN := os.Getenv("DSN")
 	if defaultDSN == "" {
 		defaultDSN = "postgres://scratchpad:password@localhost/scratchpad?sslmode=disable"
 	}
-	dsn := flag.String("dsn", defaultDSN, "Postgres data source name.")
+	flag.StringVar(&cfg.db.dsn, "dsn", defaultDSN, "Postgres data source name.")
+	// DB conn config
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
+	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
+	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max idle connection time")
+
 	flag.Parse()
 
 	// Logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	// DB Conn
-	db, err := openDB(*dsn)
+	db, err := openDB(cfg)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
@@ -92,7 +108,7 @@ func main() {
 
 	// Setting up server
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%s", *addr),
+		Addr:         fmt.Sprintf(":%s", cfg.port),
 		Handler:      app.routes(),
 		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
 		TLSConfig:    tlsConfig,
@@ -101,18 +117,24 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 	// Starting server...
-	logger.Info("Staring server", slog.String("addr", *addr))
+	logger.Info("Staring server", slog.String("port", cfg.port))
 	err = srv.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
 	logger.Error(err.Error())
 	os.Exit(1)
 }
 
-func openDB(dsn string) (*sql.DB, error) {
+func openDB(cfg config) (*sql.DB, error) {
 	// Start DB connection pooling
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("postgres", cfg.db.dsn)
 	if err != nil {
 		return nil, err
 	}
+
+	// Setting conn config
+	db.SetMaxOpenConns(cfg.db.maxOpenConns)
+	db.SetMaxIdleConns(cfg.db.maxIdleConns)
+	db.SetConnMaxIdleTime(cfg.db.maxIdleTime)
+
 	// Create a timeout context
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
