@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"database/sql"
 	"flag"
+	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -14,7 +16,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/discruter/scratchpad/internal/models"
 	"github.com/go-playground/form/v4"
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
 // Application struct
@@ -31,15 +33,15 @@ func main() {
 	// Network Address flag
 	defaultAddr := os.Getenv("ADDR")
 	if defaultAddr == "" {
-		defaultAddr = ":4000"
+		defaultAddr = "4000"
 	}
 	addr := flag.String("addr", defaultAddr, "HTTP network address")
 	// Data Source Name for MySQL flag
 	defaultDSN := os.Getenv("DSN")
 	if defaultDSN == "" {
-		defaultDSN = "web:pass@tcp(localhost:3306)/scratchpad?parseTime=true"
+		defaultDSN = "postgres://scratchpad:password@localhost/scratchpad?sslmode=disable"
 	}
-	dsn := flag.String("dsn", defaultDSN, "MySQL data source name.")
+	dsn := flag.String("dsn", defaultDSN, "Postgres data source name.")
 	flag.Parse()
 
 	// Logger
@@ -53,6 +55,8 @@ func main() {
 	}
 
 	defer db.Close()
+
+	logger.Info("Database connection pool established.")
 
 	// Initalizing cache map
 	templateCache, err := newTemplateCache()
@@ -88,7 +92,7 @@ func main() {
 
 	// Setting up server
 	srv := &http.Server{
-		Addr:         *addr,
+		Addr:         fmt.Sprintf(":%s", *addr),
 		Handler:      app.routes(),
 		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
 		TLSConfig:    tlsConfig,
@@ -105,12 +109,15 @@ func main() {
 
 func openDB(dsn string) (*sql.DB, error) {
 	// Start DB connection pooling
-	db, err := sql.Open("mysql", dsn)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
 	}
+	// Create a timeout context
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	// Ping the DB to verify connection
-	if err = db.Ping(); err != nil {
+	if err = db.PingContext(ctx); err != nil {
 		db.Close()
 		return nil, err
 	}
