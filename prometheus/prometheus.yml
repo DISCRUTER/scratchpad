@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 5s
+  # Must be <= scrape_interval, otherwise Prometheus rejects the config
+  # (the implicit default is 10s).
+  scrape_timeout: 3s
+
+scrape_configs:
+  - job_name: "scratchpad"
+    static_configs:
+      - targets: ["scratchpad:8081"]
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
