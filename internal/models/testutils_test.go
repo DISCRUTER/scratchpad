@@ -8,7 +8,7 @@ import (
 
 func newTestDB(t *testing.T) *sql.DB {
 	// Connect to db
-	db, err := sql.Open("mysql", "test_web:pass@tcp(localhost:3306)/test_scratchpad?parseTime=true&multiStatements=true")
+	db, err := sql.Open("postgres", "postgres://scratchpad:password@localhost/scratchpad?sslmode=disable")
 	if err != nil {
 		t.Fatal(err)
 	}
