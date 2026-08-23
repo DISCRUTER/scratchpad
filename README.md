@@ -83,6 +83,18 @@ Open `https://localhost:4000` in your browser (accept the self-signed cert warni
 
 > **Note:** the app serves over HTTPS only. Sessions and CSRF cookies are marked `Secure`, so the site won't function over plain HTTP.
 
+## Migration Commands
+
+>[!IMPORTANT]
+> The migration is performed using goland-migration cli tool and therfore, is adivsed to install it before running migrations.
+
+```sh
+# Migrate Up
+~/go/bin/migrate -path=./migrations -database=postgres://scratchpad:password@localhost/scratchpad?sslmode=disable up
+# Migrate Down
+ ~/go/bin/migrate -path=./migrations -database=postgres://scratchpad:password@localhost/scratchpad?sslmode=disable down
+```
+
 ## Docker Deployment
 
 Copy `.env.example` to `.env` and set the database credentials, then start the stack:
