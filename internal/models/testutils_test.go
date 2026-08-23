@@ -28,17 +28,17 @@ func newTestDB(t *testing.T) *sql.DB {
 	// Cleanup function
 	t.Cleanup(func() {
 		defer db.Close()
-		
+
 		script, err := os.ReadFile("./testdata/teardown.sql")
 		if err != nil {
 			t.Fatal(err)
 		}
-			
+
 		_, err = db.Exec(string(script))
 		if err != nil {
 			t.Fatal(err)
 		}
 	})
-	
+
 	return db
 }

@@ -1,3 +1,5 @@
-DROP TABLE users;
+DROP TABLE IF EXISTS sessions;
 
-DROP TABLE pads;
+DROP TABLE IF EXISTS users;
+
+DROP TABLE IF EXISTS pads;
