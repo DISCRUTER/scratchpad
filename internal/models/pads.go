@@ -26,22 +26,18 @@ type PadsModel struct {
 
 // Insert new Pad in DB and return ID
 func (m *PadsModel) Insert(title string, content string, expires int) (int, error) {
+	var id int
 	// Raw SQL insert statement
 	stmt := `INSERT INTO pads (title, content, created, expires)
 	VALUES ($1, $2, NOW() AT TIME ZONE 'utc', (NOW() AT TIME ZONE 'utc') + ($3 * INTERVAL '1 day'))
 	RETURNING id`
 	// Query execution with data
-	result, err := m.DB.Exec(stmt, title, content, expires)
-	if err != nil {
-		return 0, err
-	}
-	// ID fetch for the inserted row
-	id, err := result.LastInsertId()
+	err := m.DB.QueryRow(stmt, title, content, expires).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
 
-	return int(id), nil
+	return id, nil
 }
 
 // Return a specific Pad via the id
