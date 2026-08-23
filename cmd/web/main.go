@@ -14,6 +14,7 @@ import (
 
 	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/v2"
+	"github.com/discruter/scratchpad/internal/metrics"
 	"github.com/discruter/scratchpad/internal/models"
 	"github.com/go-playground/form/v4"
 	_ "github.com/lib/pq"
@@ -22,6 +23,7 @@ import (
 // Application struct
 type application struct {
 	logger         *slog.Logger
+	metrics        *metrics.Metrics
 	pads           models.PadsModelInterface
 	users          models.UserModelInterface
 	templateCache  map[string]*template.Template
@@ -30,8 +32,9 @@ type application struct {
 }
 
 type config struct {
-	port string
-	db   struct {
+	port        string
+	metricsPort string
+	db          struct {
 		dsn          string
 		maxOpenConns int
 		maxIdleConns int
@@ -44,9 +47,15 @@ func main() {
 	// Network Address flag
 	defaultPort := os.Getenv("PORT")
 	if defaultPort == "" {
-		defaultPort = "4000"
+		defaultPort = "8080"
 	}
 	flag.StringVar(&cfg.port, "port", defaultPort, "HTTP network address")
+	// Metrics Address flag
+	defaultMetricsPort := os.Getenv("PORT")
+	if defaultMetricsPort == "" {
+		defaultMetricsPort = "8081"
+	}
+	flag.StringVar(&cfg.metricsPort, "metrics_port", defaultMetricsPort, "Metrics network address")
 	// Data Source Name for PostgreSQL flag
 	defaultDSN := os.Getenv("DSN")
 	if defaultDSN == "" {
@@ -62,6 +71,9 @@ func main() {
 
 	// Logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	// Prometheus Metrics
+	metrics, pMux := metrics.GetMetrics()
 
 	// DB Conn
 	db, err := openDB(cfg)
@@ -93,6 +105,7 @@ func main() {
 	// Creating application instance
 	app := &application{
 		logger:         logger,
+		metrics:        metrics,
 		pads:           &models.PadsModel{DB: db},
 		users:          &models.UserModel{DB: db},
 		templateCache:  templateCache,
@@ -117,6 +130,13 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 	// Starting server...
+	// Prometheus
+	logger.Info("Staring metrics server", slog.String("port", cfg.metricsPort))
+	go func() {
+		err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.metricsPort), pMux)
+		logger.Error(err.Error())
+	}()
+	// Application
 	logger.Info("Staring server", slog.String("port", cfg.port))
 	err = srv.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
 	logger.Error(err.Error())

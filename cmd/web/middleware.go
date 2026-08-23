@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/justinas/nosurf"
 )
@@ -101,5 +103,22 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 			r = r.WithContext(ctx)
 		}
 		next.ServeHTTP(w, r)
+	})
+}
+
+// Prometheus
+func (app *application) trackMetrics(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Setup metrics
+		app.metrics.ActiveRequests.Inc()
+		start := time.Now()
+
+		next.ServeHTTP(w, r)
+		
+		// Final metrics
+		duration := time.Since(start).Seconds()
+		app.metrics.RequestCount.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(r.Response.StatusCode)).Inc()
+		app.metrics.RequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration)
+		app.metrics.ActiveRequests.Dec()
 	})
 }
