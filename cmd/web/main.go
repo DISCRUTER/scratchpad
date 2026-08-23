@@ -51,7 +51,7 @@ func main() {
 	}
 	flag.StringVar(&cfg.port, "port", defaultPort, "HTTP network address")
 	// Metrics Address flag
-	defaultMetricsPort := os.Getenv("PORT")
+	defaultMetricsPort := os.Getenv("METRICS_PORT")
 	if defaultMetricsPort == "" {
 		defaultMetricsPort = "8081"
 	}
@@ -73,7 +73,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	// Prometheus Metrics
-	metrics, pMux := metrics.GetMetrics()
+	m, pMux := metrics.GetMetrics()
 
 	// DB Conn
 	db, err := openDB(cfg)
@@ -105,7 +105,7 @@ func main() {
 	// Creating application instance
 	app := &application{
 		logger:         logger,
-		metrics:        metrics,
+		metrics:        m,
 		pads:           &models.PadsModel{DB: db},
 		users:          &models.UserModel{DB: db},
 		templateCache:  templateCache,
@@ -135,6 +135,7 @@ func main() {
 	go func() {
 		err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.metricsPort), pMux)
 		logger.Error(err.Error())
+		os.Exit(1)
 	}()
 	// Application
 	logger.Info("Staring server", slog.String("port", cfg.port))
