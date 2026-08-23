@@ -28,7 +28,8 @@ type PadsModel struct {
 func (m *PadsModel) Insert(title string, content string, expires int) (int, error) {
 	// Raw SQL insert statement
 	stmt := `INSERT INTO pads (title, content, created, expires)
-	VALUES(?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY))`
+	VALUES ($1, $2, NOW() AT TIME ZONE 'utc', (NOW() AT TIME ZONE 'utc') + ($3 * INTERVAL '1 day'))
+	RETURNING id`
 	// Query execution with data
 	result, err := m.DB.Exec(stmt, title, content, expires)
 	if err != nil {
@@ -45,8 +46,10 @@ func (m *PadsModel) Insert(title string, content string, expires int) (int, erro
 
 // Return a specific Pad via the id
 func (m *PadsModel) Get(id int) (Pads, error) {
-	stmt := `SELECT id, title, content, created, expires FROM pads
-	WHERE expires > UTC_TIMESTAMP() AND id = ?`
+	stmt := `SELECT id, title, content, created, expires
+	FROM pads
+	WHERE expires > (NOW() AT TIME ZONE 'utc') AND id = $1`
+
 	// QueryRow retuen a pointer to the sql row
 	row := m.DB.QueryRow(stmt, id)
 	// Fetch the value from row
@@ -67,8 +70,10 @@ func (m *PadsModel) Get(id int) (Pads, error) {
 // This will the recent 10 Pads
 func (m *PadsModel) Latest() ([]Pads, error) {
 	// SQL statement
-	stmt := `SELECT id, title, content, created, expires FROM pads
-	WHERE expires > UTC_TIMESTAMP() ORDER BY id DESC LIMIT 10`
+	stmt := `SELECT id, title, content, created, expires
+	FROM pads
+	WHERE expires > (NOW() AT TIME ZONE 'utc')
+	ORDER BY id DESC LIMIT 10`
 	// Query database
 	rows, err := m.DB.Query(stmt)
 	if err != nil {

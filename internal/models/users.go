@@ -3,10 +3,9 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"strings"
 	"time"
 
-	"github.com/go-sql-driver/mysql"
+	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -37,14 +36,15 @@ func (m *UserModel) Insert(name, email, password string) error {
 
 	// SQL Statement
 	stmt := `INSERT INTO users (name, email, hashed_password, created)
-	VALUES (?, ?, ?, UTC_TIMESTAMP())`
+	VALUES ($1, $2, $3, NOW() AT TIME ZONE 'utc')`
 
 	// Executing SQL statement
 	_, err = m.DB.Exec(stmt, name, email, hash)
 	if err != nil {
-		var mySQLError *mysql.MySQLError
-		if errors.As(err, &mySQLError) {
-			if mySQLError.Number == 1062 && strings.Contains(mySQLError.Message, "users_uc_email") {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			// 23505 is PostgreSQL unique_violation error code
+			if pqErr.Code == "23505" && pqErr.Constraint == "users_uc_email" {
 				return ErrDuplicateEmail
 			}
 		}
@@ -59,7 +59,10 @@ func (m *UserModel) Authenticate(email, password string) (int, error) {
 	var hashedPassword []byte
 
 	// Query the DB
-	stmt := `SELECT id, hashed_password FROM users WHERE email = ?`
+	stmt := `SELECT id, hashed_password
+	FROM users
+	WHERE email = $1`
+
 	err := m.DB.QueryRow(stmt, email).Scan(&id, &hashedPassword)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -85,7 +88,7 @@ func (m *UserModel) Authenticate(email, password string) (int, error) {
 func (m *UserModel) Exists(id int) (bool, error) {
 	var exists bool
 
-	stmt := `SELECT EXISTS(SELECT true FROM users WHERE id = ?)`
+	stmt := `SELECT EXISTS(SELECT true FROM users WHERE id = $1)`
 
 	err := m.DB.QueryRow(stmt, id).Scan(&exists)
 	return exists, err
