@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/alexedwards/scs/mysqlstore"
+	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/discruter/scratchpad/internal/models"
 	"github.com/go-playground/form/v4"
@@ -31,11 +31,11 @@ type application struct {
 
 type config struct {
 	port string
-	db struct{
-		dsn string
+	db   struct {
+		dsn          string
 		maxOpenConns int
 		maxIdleConns int
-		maxIdleTime time.Duration
+		maxIdleTime  time.Duration
 	}
 }
 
@@ -86,7 +86,7 @@ func main() {
 
 	// Intializing session manager
 	sessionManager := scs.New()
-	sessionManager.Store = mysqlstore.New(db)
+	sessionManager.Store = postgresstore.New(db)
 	sessionManager.Lifetime = 12 * time.Hour
 	sessionManager.Cookie.Secure = true
 
