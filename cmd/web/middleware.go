@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/justinas/nosurf"
 )
@@ -102,4 +104,59 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// Prometheus
+func (app *application) trackMetrics(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+
+		app.metrics.ActiveRequests.Inc()
+		start := time.Now()
+		defer func() {
+			endpoint := requestRoutePattern(r)
+			duration := time.Since(start).Seconds()
+			app.metrics.RequestCount.WithLabelValues(r.Method, endpoint, strconv.Itoa(recorder.status)).Inc()
+			app.metrics.RequestDuration.WithLabelValues(r.Method, endpoint).Observe(duration)
+			app.metrics.ActiveRequests.Dec()
+		}()
+
+		next.ServeHTTP(recorder, r)
+	})
+}
+
+// requestRoutePattern returns the bounded-cardinality route pattern label
+// for a request. ServeMux records the matched pattern on the request
+// during dispatch; requests that never match fall back to "unmatched".
+func requestRoutePattern(r *http.Request) string {
+	if r.Pattern != "" {
+		return r.Pattern
+	}
+	return "unmatched"
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status      int
+	wroteHeader bool
+}
+
+func (w *statusRecorder) WriteHeader(statusCode int) {
+	if !w.wroteHeader {
+		w.status = statusCode
+		w.wroteHeader = true
+	}
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (w *statusRecorder) Write(b []byte) (int, error) {
+	if !w.wroteHeader {
+		w.status = http.StatusOK
+		w.wroteHeader = true
+	}
+	return w.ResponseWriter.Write(b)
+}
+
+func (w *statusRecorder) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
 }

@@ -1,36 +1,102 @@
 services:
   db:
-    image: mysql:9.7
-    container_name: scratchpad_mysql_db
+    image: docker.io/library/postgres:17
+    container_name: scratchpad_db
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: scratchpad
-      MYSQL_USER: web
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    networks:
-      - scratchpad_net
+      POSTGRES_DB: scratchpad
+      POSTGRES_USER: scratchpad
+      POSTGRES_PASSWORD: password
     volumes:
-      - scratchpad_data:/var/lib/mysql
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - scratchpad_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD-SHELL", "pg_isready -U scratchpad -d scratchpad"]
       interval: 5s
       timeout: 5s
-      retries: 10
-
-  web:
-    build: .
-    container_name: scratchpad_go_web
-    restart: always
+      retries: 12
+      start_period: 10s
     networks:
       - scratchpad_net
-    ports:
-      - "8080:8080"
+
+  # One-shot migration runner; exits after applying ./migrations.
+  migrate:
+    build:
+      context: .
+      dockerfile: Containerfile.migrate
+    container_name: scratchpad_migrate
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./migrations:/migrations:ro
+    command: ["-path", "/migrations", "-database", "postgres://scratchpad:password@db:5432/scratchpad?sslmode=disable", "up"]
+    networks:
+      - scratchpad_net
+
+  scratchpad:
+    build: .
+    container_name: scratchpad_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PORT: "8080"
+      METRICS_PORT: "8081"
+      DSN: postgres://scratchpad:password@db:5432/scratchpad?sslmode=disable
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./tls:/app/tls:ro
+    networks:
+      - scratchpad_net
+
+  prometheus:
+    image: docker.io/prom/prometheus:latest
+    container_name: scratchpad_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - scratchpad_net
+
+  grafana:
+    image: docker.io/grafana/grafana:13.0
+    container_name: scratchpad_grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: password
+    volumes:
+      - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - scratchpad_grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - scratchpad_net
+
+  pgadmin:
+    image: docker.io/dpage/pgadmin4:latest
+    container_name: scratchpad_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@scratchpad.com
+      PGADMIN_DEFAULT_PASSWORD: password
+      PGADMIN_CONFIG_SERVER_MODE: "True"
+    ports:
+      - "5050:80"
+    networks:
+      - scratchpad_net
 
 volumes:
-  scratchpad_data:
+  scratchpad_db_data:
+  scratchpad_grafana_data:
+
 networks:
   scratchpad_net:

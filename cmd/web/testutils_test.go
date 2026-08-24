@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/alexedwards/scs/v2"
+	"github.com/discruter/scratchpad/internal/metrics"
 	"github.com/discruter/scratchpad/internal/models/mocks"
 	"github.com/go-playground/form/v4"
 )
@@ -31,6 +32,8 @@ func newTestApplication(t *testing.T) *application {
 	sessionManager.Lifetime = 12 * time.Hour
 	sessionManager.Cookie.Secure = true
 
+	m, _ := metrics.GetMetrics()
+
 	return &application{
 		logger:         slog.New(slog.DiscardHandler),
 		pads:           &mocks.PadsModel{},
@@ -38,6 +41,7 @@ func newTestApplication(t *testing.T) *application {
 		templateCache:  templateCache,
 		formDecoder:    formDecoder,
 		sessionManager: sessionManager,
+		metrics:        m,
 	}
 }
 
