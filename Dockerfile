@@ -1,25 +1,30 @@
 # Builder Stage
-FROM golang:1.26-alpine AS builder
+FROM docker.io/library/golang:1.26-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o main .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /bin/web ./cmd/web
 
 # Runtime Stage
-FROM alpine:3.24 as runtime
+FROM docker.io/library/golang:1.26-alpine AS runtime
 
 WORKDIR /app
 
-COPY --from=builder /app/main .
+COPY --from=builder /bin/web ./web
 
-RUN addgroup --system appuser && adduser --system --group appuser
+RUN addgroup -S appuser && adduser -S -G appuser appuser
 USER appuser
 
-EXPOSE 8080
+# The app reads PORT, METRICS_PORT and DSN from the environment and
+# expects TLS certs at ./tls/cert.pem and ./tls/key.pem (mount them).
+ENV PORT=8080 \
+    METRICS_PORT=8081
 
-CMD [ "./main" ]
+EXPOSE 8080 8081
+
+ENTRYPOINT ["./web"]

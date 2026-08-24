@@ -1,0 +1,11 @@
+# Builds the golang-migrate CLI pinned to a known-good release.
+FROM docker.io/library/golang:1.26-alpine AS cli
+
+ARG MIGRATE_VERSION=v4.18.1
+RUN GOBIN=/out go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@${MIGRATE_VERSION}
+
+FROM docker.io/library/golang:1.26-alpine
+
+COPY --from=cli /out/migrate /usr/local/bin/migrate
+
+ENTRYPOINT ["migrate"]
