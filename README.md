@@ -1,4 +1,5 @@
 # ScratchPad
+![CI Status](https://github.com/DISCRUTER/scratchpad/actions/workflows/ci.yml/badge.svg?branch=main)
 
 A server-rendered Go web application for creating and sharing self-destructing text snippets. Sign up, log in, publish a snippet with a title and content, and choose how long it lives (1 day, 1 week, or 1 year) before it disappears.
 
